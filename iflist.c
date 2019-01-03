@@ -17,6 +17,10 @@
 #define UNFORKED 0
 #define TEST_SERVER_1 1
 #define TEST_SERVER_2 2
+#define TEST_SERVER_3 3
+#define TEST_SERVER_4 4
+#define TEST_SERVER_5 5
+#define TEST_SERVER_6 6
 #define NO_SIGNAL 0
 #define SHUTDOWN 1
 #define SYSTEM_IDLE 0
@@ -39,22 +43,20 @@ char* tcpdump(char** arg_list){
 	char* command = malloc(sizeof(char)*256);
 	//tcpdump 'tcp port 80 and host and TEST_SERVER_1 (((ip[2:2] - ((ip[0]&0xf)<<2)) - ((tcp[12]&0xf0)>>2)) != 0)'
 	sprintf(command, "sudo tcpdump 'tcp port %s and (ip dst %s) and (((ip[2:2] - ((ip[0]&0xf)<<2)) - ((tcp[12]&0xf0)>>2)) != 0)' -w AP%d.pcap && tshark -nr AP%d.pcap -Y 'not tcp.analysis.retransmission and not tcp.analysis.fast_retransmission' -w AP%d_f.pcapng && editcap -F libpcap -T ether AP%d_f.pcapng AP%d_f.pcap && python analyse.py AP%d_f.pcap", arg_list[4], arg_list[2], pid, pid, pid, pid, pid, pid);
-	printf("command %s \n", command);
+	//printf("command %s \n", command);
 	return(command);
 }
 
 
-void launch_measurement(char** arg_list, char* port1, char* port2, int which_server, int *system_status){
+void launch_measurement(char** arg_list, char* port1, char* port2, char* port3, char* port4, char* port5, char* port6, int which_server, int *system_status){
 	fprintf(stdout, "starting_timestamp_measurement=%lu\n", (unsigned long)time(NULL));
-
-	
 
 	char* command = malloc(sizeof(char)*256);
 	char* command2 = malloc(sizeof(char)*256);
 	if (!strcmp(arg_list[0], "iperf3")){
 		strncpy(port1, arg_list[4], strlen(arg_list[4]));
 		strncpy(port2, arg_list[4], strlen(arg_list[4]));
-		printf("%s %s %s %s %s %s.\n", arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]); 
+		//printf("%s %s %s %s %s %s.\n", arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]); 
 		char* ptr;
 		int tmp_port;
 
@@ -78,7 +80,25 @@ void launch_measurement(char** arg_list, char* port1, char* port2, int which_ser
 				*system_status = SYSTEM_BUSY;
 				arg_list[4] = port2;
 				break;
+			case TEST_SERVER_3:
+				*system_status = SYSTEM_BUSY;
+				arg_list[4] = port3;
+				break;
 
+			case TEST_SERVER_4:
+				*system_status = SYSTEM_BUSY;
+				arg_list[4] = port4;
+				break;
+			case TEST_SERVER_5:
+				*system_status = SYSTEM_BUSY;
+				arg_list[4] = port5;
+				break;
+
+			case TEST_SERVER_6:
+				*system_status = SYSTEM_BUSY;
+				arg_list[4] = port6;
+				break;
+	
 			default:
 				printf("[SYSTEM] error, unable to launch the test\n");
 				exit(-20);
@@ -93,7 +113,7 @@ void launch_measurement(char** arg_list, char* port1, char* port2, int which_ser
 		//execvp (arg_list[0],  arg_list);
 		command2 = tcpdump(arg_list);
 		sprintf(command, "%s& %s %s %s %s %s %d\n", command2, arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]); 
-		printf("command %s \n", command);
+		//printf("command %s \n", command);
 		system(command);
 	}
 }
@@ -104,7 +124,7 @@ void launch_saturator(char* reliable_ip, char* reliabe_dev, char* test_ip, char*
 	char* saturator = "./saturatr";
 	char* command = malloc(sizeof(char)*256);
 	sprintf(command, "sudo %s %s %s %s %s %s", saturator, reliable_ip, reliabe_dev, test_ip, test_dev, server_ip);
-	printf("command %s \n", command);
+	//printf("command %s \n", command);
 	system(command);
 }
 
@@ -131,6 +151,10 @@ int main (int argc, char **argv){
 	char* sel_if_addr = malloc(sizeof(char)*256);
 	char* iperf_port1 = malloc(sizeof(char)*6);
 	char* iperf_port2 = malloc(sizeof(char)*6);
+	char* iperf_port3 = malloc(sizeof(char)*6);
+	char* iperf_port4 = malloc(sizeof(char)*6);
+	char* iperf_port5 = malloc(sizeof(char)*6);
+	char* iperf_port6 = malloc(sizeof(char)*6);
 
 	char* server_ip = malloc(sizeof(char)*256);
 	//server_ip = "132.227.122.38";
@@ -192,13 +216,11 @@ int main (int argc, char **argv){
 		
 		/* if ctrl+c detected, kill everything, no matter what */
 		if (input_signal == SHUTDOWN && exec_status == FORKED && childPID > 0) {	
-			char* commandoutput = "python filloutput.py";
-			printf("%s \n", commandoutput);
-			system(commandoutput);
+
 			kill( childPID, SIGKILL );
 			exec_status = UNFORKED;
 			sys_status = SYSTEM_IDLE;
-			printf("[SYSTEM] process %d unforked\n", childPID);
+
 		}
 		if (input_signal == SHUTDOWN && exec_status == UNFORKED) {
 			printf("[SYSTEM] child process killed, closing father process\n");
@@ -265,14 +287,10 @@ int main (int argc, char **argv){
 								//printf("\nlauncing saturater\n\n");
 								//launch_saturator(sel_if_addr, sel_if_name, sel_if_addr, sel_if_name, server_ip);
 								if (user_argc > 0) {
-									
-									launch_measurement(user_argv_list, iperf_port1, iperf_port2, test_server, &sys_status);
-									
+									launch_measurement(user_argv_list, iperf_port1, iperf_port2, iperf_port3, iperf_port4, iperf_port5, iperf_port6, test_server, &sys_status);
 								} else {
 									printf("car-client: default option chosen\n");
-									
-									launch_measurement(default_argv_list, iperf_port1, iperf_port2, test_server, &sys_status);
-									
+									launch_measurement(default_argv_list, iperf_port1, iperf_port2, iperf_port3, iperf_port4, iperf_port5, iperf_port6, test_server, &sys_status);
 								}
 							} else {
 								printf("\ncar-client: ERROR, the system is busy\n");
@@ -299,7 +317,6 @@ int main (int argc, char **argv){
 				sys_status = SYSTEM_IDLE;
 				printf("[SYSTEM] process %d unforked\n", childPID);
 				fprintf(stdout, "closing_timestamp_measurement=%lu\n\n", (unsigned long)time(NULL));
-
 			}
 		}
 		if (argc == 1)
@@ -308,6 +325,8 @@ int main (int argc, char **argv){
 
 
 	close(devices);
+
+
 
 	/* freeing allocated memory*/
 	for (int free_i = 0; free_i < user_argc; free_i ++) {

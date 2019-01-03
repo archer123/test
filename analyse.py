@@ -7,14 +7,21 @@ import os
 f = open(sys.argv[1])
 pcap = dpkt.pcap.Reader(f)
 
-
-outname = os.path.splitext(sys.argv[1])[0] + ".txt"
+path ="./"
+outname = "output.txt"
+cptAP = 1
 #print outname
-out = open(outname, 'w')
-out.write("output file for " + os.path.splitext(sys.argv[1])[0] + "\n")
-out.close()
+if not os.path.exists(outname):
+	out = open(outname, 'w')
+	out.write("AP1\n")
+else:
+	out = open(outname, 'a+')
+	for line in out:
+		if "AP" in line:
+			cptAP += 1
+	out.write("AP"+ str(cptAP) +"\n")
 
-out = open(outname, 'a')
+
 
 #counter for goodput for all
 cpt = 0
