@@ -36,20 +36,26 @@ int cpt=0;
 /* FUNCTIONS */
 
 
-char* tcpdump(char** arg_list){
+/*char* tcpdump(char** arg_list){
 	fprintf(stdout, "tcpdump_start_at=%lu\n", (unsigned long)time(NULL));
 
 	int pid = getpid();
 	char* command = malloc(sizeof(char)*256);
-	//tcpdump 'tcp port 80 and host and TEST_SERVER_1 (((ip[2:2] - ((ip[0]&0xf)<<2)) - ((tcp[12]&0xf0)>>2)) != 0)'
-	sprintf(command, "sudo tcpdump 'tcp port %s and (ip dst %s) and (((ip[2:2] - ((ip[0]&0xf)<<2)) -\
-	 ((tcp[12]&0xf0)>>2)) != 0)' -w AP%d.pcap &&\
-	  tshark -nr AP%d.pcap -Y 'not tcp.analysis.retransmission and not tcp.analysis.fast_retransmission' -w _AP%d.pcapng &&\
-	  editcap -F libpcap -T ether _AP%d.pcapng _AP%d.pcap && python analyse.py _AP%d.pcap",
-		arg_list[4], arg_list[2], pid, pid, pid, pid, pid, pid);
+	sprintf(command, "sudo tcpdump -S 'tcp port %s' -w AP%d.pcap &",
+		arg_list[4], pid);
 	//printf("command %s \n", command);
 	return(command);
 }
+*/
+
+// char* analyse(char** arg_list){
+// 	int pid = getpid();
+// 	char* command = malloc(sizeof(char)*256);
+// 	sprintf(command, "killall tcpdump; tshark -nr AP%d.pcap -Y 'not tcp.analysis.retransmission and not tcp.analysis.fast_retransmission and tcp.len > 0' -w _AP%d.pcapng &&\
+// 	  editcap -F libpcap -T ether _AP%d.pcapng _AP%d.pcap && python analyse.py _AP%d.pcap &",
+// 		pid, pid, pid, pid, pid);
+// 	return(command);
+// }
 
 
 void launch_measurement(char** arg_list, char* port1, char* port2, char* port3, char* port4, char* port5, char* port6, int which_server, int *system_status){
@@ -57,6 +63,7 @@ void launch_measurement(char** arg_list, char* port1, char* port2, char* port3, 
 
 	char* command = malloc(sizeof(char)*256);
 	char* command2 = malloc(sizeof(char)*256);
+	char* command3 = malloc(sizeof(char)*256);
 	if (!strcmp(arg_list[0], "iperf3")){
 		strncpy(port1, arg_list[4], strlen(arg_list[4]));
 		strncpy(port2, arg_list[4], strlen(arg_list[4]));
@@ -115,18 +122,24 @@ void launch_measurement(char** arg_list, char* port1, char* port2, char* port3, 
 				printf("[SYSTEM] error, unable to launch the test\n");
 				exit(-20);
 		}
-		//execvp (arg_list[0],  arg_list);
-		command2 = tcpdump(arg_list);
-		sprintf(command, "%s& %s %s %s %s %s %d\n", command2, arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]);
-		printf("command %s \n", command);
+		fprintf(stdout, "tcpdump_start_at=%lu\n", (unsigned long)time(NULL));
+
+		int pid = getpid();
+		sprintf(command2, "sudo tcpdump -S 'tcp port %s' -w AP%d.pcap &", arg_list[4], pid);
+		system(command2);
+		sprintf(command, "%s %s %s %s %s %d", arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]);
+		//printf("command %s \n", command);
 		system(command);
+		
 	} else {
 
 		//execvp (arg_list[0],  arg_list);
-		command2 = tcpdump(arg_list);
-		sprintf(command, "%s& %s %s %s %s %s %d\n", command2, arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]);
-		//printf("command %s \n", command);
+		int pid = getpid();
+		sprintf(command2, "sudo tcpdump -S 'tcp port %s' -w AP%d.pcap &", arg_list[4], pid);
+		system(command2);
+		sprintf(command, "%s %s %s %s %s %d", arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]);
 		system(command);
+		
 	}
 }
 
@@ -142,10 +155,10 @@ void launch_saturator(char* reliable_ip, char* reliabe_dev, char* test_ip, char*
 
 
 void CtrlCHandler (int dummy) {
-
+	
 	input_signal = SHUTDOWN;
-
 	printf("\n[SYSTEM] session terminated by the user\n\tTERMINATING THE SESSION...\n\tKILLING PROCESS: %d\n\n", getpid());
+	system("killall tcpdump");
 	fprintf(stdout, "\nclosing_timestamp=%lu\n\n", (unsigned long)time(NULL));
 }
 
@@ -169,8 +182,8 @@ int main (int argc, char **argv){
 	char* iperf_port6 = malloc(sizeof(char)*6);
 
 	char* server_ip = malloc(sizeof(char)*256);
-	server_ip = "132.227.122.38";
-	//server_ip = "192.168.1.52";
+	//server_ip = "132.227.122.38";
+	server_ip = "192.168.1.52";
 
 	int static exec_status = UNFORKED;
 	int static flag = NO_IF_MATCH;
@@ -180,8 +193,8 @@ int main (int argc, char **argv){
 	char* default_argv_list[] = {
 		"iperf3",
 		"-c",
-		"132.227.122.38",
-		//"192.168.1.52",
+		//"132.227.122.38",
+		"192.168.1.52",
 		"-p",
 		"5000",
 		NULL
@@ -228,13 +241,15 @@ int main (int argc, char **argv){
 
 		/* if ctrl+c detected, kill everything, no matter what */
 		if (input_signal == SHUTDOWN && exec_status == FORKED && childPID > 0) {
-
 			kill( childPID, SIGKILL );
 			exec_status = UNFORKED;
 			sys_status = SYSTEM_IDLE;
 
 		}
 		if (input_signal == SHUTDOWN && exec_status == UNFORKED) {
+			char* command = malloc(sizeof(char)*256);
+			sprintf(command, "python analysis.py %s", server_ip);
+			system(command);
 			printf("[SYSTEM] child process killed, closing father process\n");
 			return 5;
 		}
@@ -264,7 +279,6 @@ int main (int argc, char **argv){
 
 			if(argc > 1){
 				if (strcmp(argv[1], ifreq[i].ifr_name) == 0){
-
 
 					flag = IF_MATCH;
 
@@ -342,7 +356,11 @@ int main (int argc, char **argv){
 		if (argc > 1 && flag == NO_IF_MATCH) {
 			/* the father process kills the child process */
 			if (exec_status == FORKED && childPID > 0) {
+							
 				kill( childPID, SIGKILL );
+				system("sudo killall iperf3");	
+				system("sudo killall tcpdump");
+
 				exec_status = UNFORKED;
 				sys_status = SYSTEM_IDLE;
 				printf("[SYSTEM] process %d unforked\n", childPID);
