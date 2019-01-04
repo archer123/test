@@ -4,22 +4,42 @@ import sys
 import datetime
 import os
 
-f = open(sys.argv[1])
-pcap = dpkt.pcap.Reader(f)
 
 path ="./"
+f = open(sys.argv[1])
+
+pcap = dpkt.pcap.Reader(f)
+
+
+#get name of current file
+(name, extension) = f.os.path.spilt(f)
+
+#get the name list in time order
+files =os.listdir(path)
+files.sort(key = os.path.getmtime)
+s= []
+for filename in files:
+    if not os.path.isdir(path +filename) and filename.endswith(".pcap") and filename.startswith("AP") and filename.without("_f"):
+        (f_name, extension) = filename.os.path.spilt(filename)
+        s.append(f_name)
+print s
+
+#get cptAP
+cptAP = 0
+found = False
+while not found and cptAP < len(s):
+	found = (s[cptAP] in name)
+	cptAP +=1
+
 outname = "output.txt"
-cptAP = 1
+
 #print outname
 if not os.path.exists(outname):
 	out = open(outname, 'w')
-	out.write("AP1\n")
+	out.write("AP" + str(cptAP) + "\n")
 else:
 	out = open(outname, 'a+')
-	for line in out:
-		if "AP" in line:
-			cptAP += 1
-	out.write("AP"+ str(cptAP) +"\n")
+	out.write("AP"+ str(cptAP) + "\n")
 
 
 
@@ -61,12 +81,11 @@ for ts, buf in pcap:
 			#print info
 			out.write(info + "\n")
 			cptsec = 0
-		
-		
+
+
 #print cpt, time
 info = "goodput = " + str((8 * cpt/(time - first))/1000000) + " mbits/s, during " + str(time - first) + "s"
 out.write(info + "\n")
 
 f.close()
 out.close()
-

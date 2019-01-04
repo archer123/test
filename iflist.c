@@ -42,7 +42,11 @@ char* tcpdump(char** arg_list){
 	int pid = getpid();
 	char* command = malloc(sizeof(char)*256);
 	//tcpdump 'tcp port 80 and host and TEST_SERVER_1 (((ip[2:2] - ((ip[0]&0xf)<<2)) - ((tcp[12]&0xf0)>>2)) != 0)'
-	sprintf(command, "sudo tcpdump 'tcp port %s and (ip dst %s) and (((ip[2:2] - ((ip[0]&0xf)<<2)) - ((tcp[12]&0xf0)>>2)) != 0)' -w AP%d.pcap && tshark -nr AP%d.pcap -Y 'not tcp.analysis.retransmission and not tcp.analysis.fast_retransmission' -w AP%d_f.pcapng && editcap -F libpcap -T ether AP%d_f.pcapng AP%d_f.pcap && python analyse.py AP%d_f.pcap", arg_list[4], arg_list[2], pid, pid, pid, pid, pid, pid);
+	sprintf(command, "sudo tcpdump 'tcp port %s and (ip dst %s) and (((ip[2:2] - ((ip[0]&0xf)<<2)) -\
+	 ((tcp[12]&0xf0)>>2)) != 0)' -w AP%d.pcap &&\
+	  tshark -nr AP%d.pcap -Y 'not tcp.analysis.retransmission and not tcp.analysis.fast_retransmission' -w _AP%d.pcapng &&\
+	  editcap -F libpcap -T ether _AP%d.pcapng _AP%d.pcap && python analyse.py _AP%d.pcap",
+		arg_list[4], arg_list[2], pid, pid, pid, pid, pid, pid);
 	//printf("command %s \n", command);
 	return(command);
 }
@@ -56,15 +60,23 @@ void launch_measurement(char** arg_list, char* port1, char* port2, char* port3, 
 	if (!strcmp(arg_list[0], "iperf3")){
 		strncpy(port1, arg_list[4], strlen(arg_list[4]));
 		strncpy(port2, arg_list[4], strlen(arg_list[4]));
-		//printf("%s %s %s %s %s %s.\n", arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]); 
+		//printf("%s %s %s %s %s %s.\n", arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]);
 		char* ptr;
 		int tmp_port;
 
 		tmp_port = strtol(arg_list[4], &ptr, 10);
 
-		if (tmp_port + 100 < MAX_PORT){
+		if (tmp_port + 500 < MAX_PORT){
 			tmp_port = tmp_port + 100;
 			sprintf(port2, "%d", tmp_port);
+			tmp_port = tmp_port + 100;
+			sprintf(port3, "%d", tmp_port);
+			tmp_port = tmp_port + 100;
+			sprintf(port4, "%d", tmp_port);
+			tmp_port = tmp_port + 100;
+			sprintf(port5, "%d", tmp_port);
+			tmp_port = tmp_port + 100;
+			sprintf(port6, "%d", tmp_port);
 		} else {
 			printf("[SYSTEM] error in the port range selection\n");
 			exit(-10);
@@ -98,21 +110,21 @@ void launch_measurement(char** arg_list, char* port1, char* port2, char* port3, 
 				*system_status = SYSTEM_BUSY;
 				arg_list[4] = port6;
 				break;
-	
+
 			default:
 				printf("[SYSTEM] error, unable to launch the test\n");
 				exit(-20);
 		}
 		//execvp (arg_list[0],  arg_list);
 		command2 = tcpdump(arg_list);
-		sprintf(command, "%s& %s %s %s %s %s %d\n", command2, arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]); 
+		sprintf(command, "%s& %s %s %s %s %s %d\n", command2, arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]);
 		printf("command %s \n", command);
 		system(command);
 	} else {
 
 		//execvp (arg_list[0],  arg_list);
 		command2 = tcpdump(arg_list);
-		sprintf(command, "%s& %s %s %s %s %s %d\n", command2, arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]); 
+		sprintf(command, "%s& %s %s %s %s %s %d\n", command2, arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]);
 		//printf("command %s \n", command);
 		system(command);
 	}
@@ -130,7 +142,7 @@ void launch_saturator(char* reliable_ip, char* reliabe_dev, char* test_ip, char*
 
 
 void CtrlCHandler (int dummy) {
-	
+
 	input_signal = SHUTDOWN;
 
 	printf("\n[SYSTEM] session terminated by the user\n\tTERMINATING THE SESSION...\n\tKILLING PROCESS: %d\n\n", getpid());
@@ -157,8 +169,8 @@ int main (int argc, char **argv){
 	char* iperf_port6 = malloc(sizeof(char)*6);
 
 	char* server_ip = malloc(sizeof(char)*256);
-	//server_ip = "132.227.122.38";
-	server_ip = "192.168.1.52";
+	server_ip = "132.227.122.38";
+	//server_ip = "192.168.1.52";
 
 	int static exec_status = UNFORKED;
 	int static flag = NO_IF_MATCH;
@@ -168,10 +180,10 @@ int main (int argc, char **argv){
 	char* default_argv_list[] = {
 		"iperf3",
 		"-c",
-		//"132.227.122.38",
-		"192.168.1.52",
+		"132.227.122.38",
+		//"192.168.1.52",
 		"-p",
-		"80",
+		"5000",
 		NULL
 	};
 
@@ -213,9 +225,9 @@ int main (int argc, char **argv){
 	signal(SIGINT, CtrlCHandler);
 
 	while(1){
-		
+
 		/* if ctrl+c detected, kill everything, no matter what */
-		if (input_signal == SHUTDOWN && exec_status == FORKED && childPID > 0) {	
+		if (input_signal == SHUTDOWN && exec_status == FORKED && childPID > 0) {
 
 			kill( childPID, SIGKILL );
 			exec_status = UNFORKED;
@@ -252,8 +264,8 @@ int main (int argc, char **argv){
 
 			if(argc > 1){
 				if (strcmp(argv[1], ifreq[i].ifr_name) == 0){
-					
-					
+
+
 					flag = IF_MATCH;
 
 					/* fork the process and launch the measurements from the child process */
@@ -261,13 +273,31 @@ int main (int argc, char **argv){
 						exec_status = FORKED;
 						printf("\n[SYSTEM] forking a child process to run the measurements\n");
 
-						/* need to alternate between 2 different iperf servers */
-						if (test_server == TEST_SERVER_2) {
+						/* need to alternate between 6 different iperf servers */
+						if (test_server == TEST_SERVER_1) {
+
+							test_server = TEST_SERVER_2;
+
+						} else if (test_server == TEST_SERVER_2) {
+
+							test_server = TEST_SERVER_3;
+
+						} else if (test_server == TEST_SERVER_3) {
+
+							test_server = TEST_SERVER_4;
+
+						} else if (test_server == TEST_SERVER_4) {
+
+							test_server = TEST_SERVER_5;
+
+						} else if (test_server == TEST_SERVER_5) {
+
+							test_server = TEST_SERVER_6;
+
+						} else if (test_server == TEST_SERVER_6) {
+
 							test_server = TEST_SERVER_1;
-						} else {
-							if (test_server == TEST_SERVER_1) {
-								test_server = TEST_SERVER_2;
-							}
+
 						}
 
 						/* fork the program and execute an external function */
@@ -280,7 +310,7 @@ int main (int argc, char **argv){
 						if (childPID == 0) {
 							/* I am in the child process, launch the measurements */
 							printf("[SYSTEM] child process PID: %d\n", getpid());
-							
+
 							if (sys_status == SYSTEM_IDLE){
 
 								printf("\ncar-client: launcing the measurement\n\n");
@@ -340,4 +370,3 @@ int main (int argc, char **argv){
 	free(sel_if_addr);
 	return 0;
 }
-
