@@ -16,20 +16,23 @@ s= []
 for filename in files:
     if not os.path.isdir(path +filename) and filename.endswith(".pcap") and filename.startswith("AP"):
         f_name = str(filename)
-        s.append(f_name) 
+        s.append(f_name)
 print(s)
 
 
 out = open("output.txt", "w")
-out.write("id\tserver/client\tbegin\tend\tgoodput\n")
+out.write("id\tbegin\tend\tgoodput\n")
 
 cptid = 0
 cptcli = 0
-cptser = 0
+cptsec = 0
 
 gettimebegin = True
 tsbegin = 0
 tsend = 0
+
+secbegin = 0
+secend = 0
 
 listseq= []
 for f in s:
@@ -50,18 +53,15 @@ for f in s:
 			if socket.inet_ntoa(ip.dst) == server:
 				#print ts, len(tcp.data)
 				cptcli += len(tcp.data)
-			else :
-				#print ts, len(tcp.data)
-				cptser += len(tcp.data)
+                if cptsec == 0:
+                    secbegin = ts
+                    secend = ts
 
-	
-	strcli = str(cptid) + "\t" + "client" + "\t" + str(tsbegin) + "\t" + str(tsend) + "\t" + str( 8* cptcli/((tsend - tsbegin)*1000000)) + "\n"
-	strser = str(cptid) + "\t" + "server" + "\t" + str(tsbegin) + "\t" + str(tsend) + "\t" + str( 8* cptser/((tsend - tsbegin)*1000000)) + "\n\n"
+
+	strcli = str(cptid) +  "\t" + str(tsbegin) + "\t" + str(tsend) + "\t" + str( 8* cptcli/((tsend - tsbegin)*1000000)) + "\n\n"
 	out.write(strcli)
-	out.write(strser)
 
 	cptcli = 0
-	cptser = 0
 
 	gettimebegin = True
 	tsbegin = 0
@@ -69,4 +69,3 @@ for f in s:
 	lsitseq = []
 
 out.close()
-

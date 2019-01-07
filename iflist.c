@@ -127,19 +127,23 @@ void launch_measurement(char** arg_list, char* port1, char* port2, char* port3, 
 		int pid = getpid();
 		sprintf(command2, "sudo tcpdump -S 'tcp port %s' -w AP%d.pcap &", arg_list[4], pid);
 		system(command2);
+		system("sleep 1");
+		printf("delay 1 s to make sure tcpdump cap whole data\n");
 		sprintf(command, "%s %s %s %s %s %d", arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]);
 		//printf("command %s \n", command);
 		system(command);
-		
+
 	} else {
 
 		//execvp (arg_list[0],  arg_list);
 		int pid = getpid();
 		sprintf(command2, "sudo tcpdump -S 'tcp port %s' -w AP%d.pcap &", arg_list[4], pid);
 		system(command2);
+		system("sleep 1");
+		printf("delay 1 s to make sure tcpdump cap whole data\n");
 		sprintf(command, "%s %s %s %s %s %d", arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5]);
 		system(command);
-		
+
 	}
 }
 
@@ -155,7 +159,7 @@ void launch_saturator(char* reliable_ip, char* reliabe_dev, char* test_ip, char*
 
 
 void CtrlCHandler (int dummy) {
-	
+
 	input_signal = SHUTDOWN;
 	printf("\n[SYSTEM] session terminated by the user\n\tTERMINATING THE SESSION...\n\tKILLING PROCESS: %d\n\n", getpid());
 	system("killall tcpdump");
@@ -182,8 +186,8 @@ int main (int argc, char **argv){
 	char* iperf_port6 = malloc(sizeof(char)*6);
 
 	char* server_ip = malloc(sizeof(char)*256);
-	//server_ip = "132.227.122.38";
-	server_ip = "192.168.1.52";
+	server_ip = "132.227.122.38";
+	//server_ip = "192.168.1.52";
 
 	int static exec_status = UNFORKED;
 	int static flag = NO_IF_MATCH;
@@ -193,8 +197,8 @@ int main (int argc, char **argv){
 	char* default_argv_list[] = {
 		"iperf3",
 		"-c",
-		//"132.227.122.38",
-		"192.168.1.52",
+		"132.227.122.38",
+		//"192.168.1.52",
 		"-p",
 		"5000",
 		NULL
@@ -356,9 +360,9 @@ int main (int argc, char **argv){
 		if (argc > 1 && flag == NO_IF_MATCH) {
 			/* the father process kills the child process */
 			if (exec_status == FORKED && childPID > 0) {
-							
+
 				kill( childPID, SIGKILL );
-				system("sudo killall iperf3");	
+				system("sudo killall iperf3");
 				system("sudo killall tcpdump");
 
 				exec_status = UNFORKED;
