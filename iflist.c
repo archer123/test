@@ -252,7 +252,7 @@ int main (int argc, char **argv){
 		}
 		if (input_signal == SHUTDOWN && exec_status == UNFORKED) {
 			char* command = malloc(sizeof(char)*256);
-			sprintf(command, "python analysis.py %s", server_ip);
+			sprintf(command, "python analysis2.py %s", server_ip);
 			system(command);
 			printf("[SYSTEM] child process killed, closing father process\n");
 			return 5;
